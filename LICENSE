@@ -1,0 +1,50 @@
+MIT License
+
+Copyright (c) 2026 Joshua Gleason
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+-------------------------------------------------------------------------------
+Scope
+-------------------------------------------------------------------------------
+
+The MIT licence above covers the original work in this repository: the build
+scripts, the drop-rate implementations, the browser app, and the data files
+those scripts produce from the game's own code.
+
+It does not, and cannot, cover the following, which are included for the tool
+to function but belong to others:
+
+  Game assets (dropcalc/assets/)
+      Sprites, map artwork and item icons extracted from Inflation RPG. These
+      are the property of the game's author and are redistributed here only so
+      the tool can display what it describes. They are not licensed by this
+      project, and the MIT grant above does not extend to them.
+
+  Enemy names (enemy_names.json, wiki/EnemyBlock.wiki)
+      Taken from the Inflation RPG Fandom wiki, which publishes under
+      CC BY-SA 3.0. The game itself names no enemy; these names are the
+      community's work. Those two files carry the wiki's licence, not this
+      one -- reuse them under CC BY-SA 3.0, with attribution to
+      https://inflation-rpg.fandom.com/wiki/Template:EnemyBlock
+
+Everything else -- the formula transcription, the parsers, the map
+reconstruction and the app itself -- was derived from the decompiled game code
+by this project.
