@@ -45,12 +45,32 @@ details.panel[open] > summary::after{content:" \25b4"}
 details.panel > summary:hover h3{color:var(--ink)}
 header{padding:16px 20px;border-bottom:1px solid var(--line);background:var(--panel);
   display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
-.wrap{display:grid;grid-template-columns:360px minmax(0,1fr);gap:18px;
+/* minmax(0,...) on both tracks, because a bare 1fr refuses to go below its
+   content's min-content width and the tables inside are far wider than a
+   phone. Without it the whole page grows to ~700px and scrolls sideways. */
+.wrap{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:18px;
   padding:18px;align-items:start;max-width:1500px}
-@media (max-width:980px){.wrap{grid-template-columns:1fr}}
+@media (max-width:980px){
+  .wrap{grid-template-columns:minmax(0,1fr)}
+  .col{position:static}
+  /* Stacked, the answer should come before the controls that produce it. The
+     character and find-an-enemy panels are over a screen tall together, so
+     leaving them first buries the card and the zone panel below the fold. */
+  #viewMaps > .col{order:2}
+  /* The calculator wants LUK above the rates, so they visibly react while it
+     is dragged, but the enemy picker still below them. display:contents lets
+     the two panels be ordered separately without a second layout. */
+  #viewCalc > .col{display:contents}
+  #viewCalc .charpanel{order:-1}
+  #viewCalc .findpanel{order:2}
+  /* 39 legend chips is taller than the map on a phone */
+  .maplegend{max-height:140px;overflow-y:auto}
+}
+
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;
-  padding:14px}
-.col{position:sticky;top:18px;display:flex;flex-direction:column;gap:14px}
+  padding:14px;min-width:0}
+.col{position:sticky;top:18px;display:flex;flex-direction:column;gap:14px;
+  min-width:0}
 label{display:block;font-size:11px;color:var(--dim);margin-bottom:3px}
 input,select{width:100%;padding:6px 8px;border:1px solid var(--line);
   border-radius:6px;background:var(--bg);color:var(--ink);font:inherit}
@@ -387,6 +407,143 @@ img.mapimg.over{position:absolute;inset:0;width:100%;height:100%}
 .itemfilters{display:grid;gap:12px;
   grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
 #itable{max-height:70vh;overflow:auto;margin-top:10px}
+/* a table wider than the panel scrolls on its own rather than pushing the
+   page sideways */
+#drops{overflow-x:auto}
+#drops table,#itable table{min-width:max-content}
+/* On a phone these tables are three times the width of the screen. The
+   columns marked .detail are the working-out rather than the answer, so they
+   step aside and what is left fits. */
+.narrow{display:none}
+/* Whenever the columns stack, LUK and the run flag share a line so the panel
+   above the rates is two rows rather than three. The slider stays directly
+   under the box it drives, which is why this is placement rather than markup
+   order. */
+@media (max-width:980px){
+  .charpanel{display:grid;grid-template-columns:minmax(0,1fr) auto;
+    column-gap:10px;align-items:end}
+  .charpanel h3{grid-column:1/-1}
+  .charpanel .lukbox{grid-column:1;grid-row:2}
+  .charpanel .check{grid-column:2;grid-row:2;margin:0;max-width:46vw}
+  .charpanel .check label{padding:0;font-size:12px;line-height:1.25}
+  .charpanel .sp{grid-column:1/-1;grid-row:3}
+}
+@media (max-width:720px){
+  /* The map swallows one-finger drags to pan itself, so it must not fill the
+     screen: leave enough page around it to scroll from. Pinch covers the
+     detail the smaller view loses. */
+  .mapwrap{height:56vh;min-height:260px}
+  /* the enemy list sits below the card now, so it need not be a wall */
+  #list{max-height:36vh}
+
+  .detail{display:none}
+  .wide{display:none}
+  .narrow{display:inline}
+  /* Stacked, the card reads as two rows: sprite and name across the top, then
+     the stats using the full width underneath. Side by side the stats were
+     squeezed into a narrow column beside the sprite while the space under it
+     went to waste. display:contents lifts them out of the body to do it. */
+  #card{display:grid;grid-template-columns:auto minmax(0,1fr);
+    gap:8px 10px;align-items:start}
+  .cardbody{display:contents}
+  #card .hero{grid-area:1/1/3/2;width:72px;height:72px}
+  #card h2{grid-area:1/2/2/3;font-size:17px}
+  #card .badges{grid-area:2/2/3/3;margin:0}
+  #card .stats{grid-area:3/1/4/3;
+    grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:6px}
+  .stats div,.stats .svtile{padding:4px 7px}
+  .stats b{font-size:13px}
+  .stats label{margin-bottom:1px}
+  /* the name and the hard-mode toggle share the top line without the toggle
+     being dropped onto one of its own */
+  #card h2{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px}
+  #card h2 .hardbox{margin-left:auto}
+  .statcell{min-width:0}
+  .drops-by{max-width:none}
+  #drops table,#itable table{min-width:0;width:100%}
+  /* four columns still need every pixel */
+  #drops th,#drops td{padding:5px 3px;font-size:12px}
+  #drops td.item .iname b{font-size:12px}
+  #drops .stepper{gap:2px}
+  #drops .stepper button{width:24px}
+  #drops td input.owned{width:28px}
+
+  /* An item is easier to read as a small card than as a row: the number keeps
+     its own column and everything else stacks under the name. */
+  #itable thead{display:none}
+  #itable table,#itable tbody{display:block;width:100%}
+  #itable tr{display:grid;grid-template-columns:2.4em minmax(0,1fr);
+    gap:3px 8px;align-items:start;padding:10px 2px;
+    border-bottom:1px solid var(--line)}
+  #itable td{display:block;border:0;padding:0;text-align:left}
+  /* an id beats a class, so the hidden columns need restating here */
+  #itable td.detail{display:none}
+  #itable td.item{display:flex;align-items:center;gap:9px}
+  #itable td.numcol{grid-column:1;grid-row:1 / span 3;padding-top:2px}
+  #itable td.item,#itable td.statcell,#itable td.drops-by{grid-column:2}
+  #itable td.statcell{text-align:left;color:var(--dim);font-size:12px}
+  #itable td.drops-by{line-height:0}
+  #itable .nodrop{display:none}
+}
+
+/* Landscape on a phone is barely 400px tall, and the map was claiming nearly
+   all of it before the picker and the panels got a look in. */
+@media (max-height:560px){
+  .mapwrap{height:62vh;min-height:200px}
+}
+
+/* Below this the drop table cannot hold four columns and a comfortable
+   stepper, and kills per drop is the drop chance restated. */
+@media (max-width:430px){
+  #drops .detail2{display:none}
+}
+/* On the smallest phones even three columns will not fit while the item keeps
+   its icon, and the name identifies it perfectly well on its own. */
+@media (max-width:360px){
+  #drops td.item .icon{display:none}
+  /* the sprite gives up more room again, and the tiles need an id to beat the
+     one set with the stacked card above */
+  #card .hero{width:56px;height:56px}
+  #card .stats{grid-template-columns:repeat(auto-fit,minmax(66px,1fr))}
+}
+/* On the smallest phones even three columns will not fit while the item keeps
+   its icon, and the name identifies it perfectly well on its own. */
+@media (max-width:360px){
+  #drops td.item .icon{display:none}
+  /* the sprite gives up more room again, and the tiles need an id to beat the
+     one set with the stacked card above */
+  #card .hero{width:56px;height:56px}
+  #card .stats{grid-template-columns:repeat(auto-fit,minmax(66px,1fr))}
+}
+
+/* Touch, rather than a narrow window: a mouse is precise at any size, a finger
+   is not. Roughly 40px is the smallest reliable target. */
+@media (pointer:coarse){
+  input[type=checkbox]{width:20px;height:20px;margin-right:8px}
+  /* the label fills the row, so the whole line toggles rather than the box */
+  .check{align-items:center;min-height:38px;margin-top:2px}
+  .check label{flex:1;padding:9px 0}
+  .stats .svtile input{height:32px}
+  details > summary{padding:8px 0}
+  footer a{padding:7px 0}
+  .hardbox{padding:7px 12px}
+  .mapzoom button{width:40px;height:40px;font-size:16px}
+  .mapzoom button:last-child{width:auto;padding:0 14px;font-size:12px}
+  .lvkey{padding:9px 12px}
+  .row{padding-top:10px;padding-bottom:10px}
+  .zenehead{padding:6px 0}
+  .stepper button{height:34px;width:30px}
+  td input.owned{height:34px}
+  #drops .stepper button{width:30px}
+  #drops td input.owned{width:30px}
+  input[type=range]{height:34px}
+  .dual{height:34px}
+  .dual input[type=range]{top:0;height:34px}
+  .dual input[type=range]::-webkit-slider-thumb{width:22px;height:22px}
+  .dual input[type=range]::-moz-range-thumb{width:22px;height:22px}
+  footer a{display:inline-block}
+  .subtabs button,.tabs button{padding-top:10px;padding-bottom:10px}
+}
 #itable table{font-size:13px}
 #itable th{position:sticky;top:0;background:var(--panel);z-index:1}
 .drops-by{text-align:left;max-width:330px;line-height:0}
@@ -406,21 +563,23 @@ img.mapimg.over{position:absolute;inset:0;width:100%;height:100%}
 
 <div class="wrap" id="viewCalc">
   <div class="col">
-    <section class="panel">
+    <section class="panel charpanel">
       <h3>Your character</h3>
-      <div><label for="luk">LUK (luk + eluk)</label>
+      <div class="lukbox"><label for="luk">LUK (luk + eluk)</label>
         <input id="luk" type="number" value="10000" min="0"></div>
       <div class="sp">
         <input id="lukRange" type="range" min="0" max="7" step="0.005" value="5.4">
       </div>
       <div class="check"><input type="checkbox" id="hl2000" checked>
-        <label for="hl2000">Finished a run at level 2,000+</label></div>
+        <label for="hl2000"><span class="wide">Finished a run at level
+          2,000+</span><span class="narrow">Reached level 2,000+</span></label>
+      </div>
     </section>
 
-    <section class="panel">
+    <section class="panel findpanel">
       <h3>Find an enemy</h3>
       <div><label for="fMap">Map</label><select id="fMap"></select></div>
-      <div class="sp"><label>Stage Lv — <span id="svRangeOut"></span></label>
+      <div class="sp"><label>Stage LV — <span id="svRangeOut"></span></label>
         <div class="dual">
           <div class="dualtrack"><div class="dualfill" id="svFill"></div></div>
           <input id="svLo" type="range" min="0" step="1" value="0">
@@ -448,7 +607,7 @@ img.mapimg.over{position:absolute;inset:0;width:100%;height:100%}
             <span>Hard mode</span></label></h2>
         <div class="badges" id="cardBadges"></div>
         <div class="stats">
-          <div class="svtile"><label for="svIn">Stage value</label>
+          <div class="svtile"><label for="svIn">Stage LV</label>
             <input id="svIn" type="number" value="0" min="0"></div>
           <div id="cardStats" style="display:contents"></div>
         </div>
@@ -906,8 +1065,7 @@ function showEtip(i, x, y) {
                                  : ''}</b>
     ${eSub(e) ? `<span class="spid">${eSub(e)}</span>` : ''}
     <span>${whereText(e)}</span>
-    <span>SV ${e.sv === null ? '?' : e.sv.toLocaleString()}${
-      e.w !== null ? ' · ' + e.w + '% spawn' : ''}</span>
+    ${e.w !== null ? `<span>${e.w}% spawn</span>` : ''}
     <span>${drops ? drops + ' item' + (drops > 1 ? 's' : '') : 'no drops'}</span>`;
   const t = $('etip');
   t.style.display = 'block';
@@ -936,10 +1094,21 @@ function showItip(t, n, x, y, hardOnly) {
   el.style.top = Math.min(y + 16, window.innerHeight - el.offsetHeight - 8) + 'px';
 }
 
+// A touch screen has no hover: a tap fires a synthetic mousemove but never a
+// mouseleave, so the card would open half a second later and sit there with
+// nothing to dismiss it. Watching the pointer that arrived beats asking a
+// media query, because it is right on a laptop with a touchscreen too.
+let lastPointer = 'mouse';
+['pointerdown', 'pointermove'].forEach(t =>
+  document.addEventListener(t, (ev) => {
+    if (ev.pointerType) lastPointer = ev.pointerType;
+  }, true));
+
 function bindTip(el, show) {
   el.addEventListener('mousemove', (ev) => {
     clearTimeout(etipTimer);
     $('etip').style.display = 'none';
+    if (lastPointer === 'touch') return;
     const x = ev.clientX, y = ev.clientY;
     etipTimer = setTimeout(() => show(x, y), HOVER_DELAY);
   });
@@ -957,9 +1126,12 @@ const active = () => {
   const e = ENEMIES[sel];
   return (hardOn() && e.hv !== null) ? ENEMIES[e.hv] : e;
 };
+// The game shows a stage value on the map as "AREA LV", so that is what it is
+// called here. The index of a stage within its map is an internal detail and
+// is never shown.
 const whereText = (e) => e.mp === 'roaming'
   ? 'Roaming boss — any tile'
-  : `Map ${e.mp}${e.lv === null ? '' : ' · Lv ' + e.lv}`;
+  : `Map ${e.mp}${e.sv === null ? '' : ' · LV ' + e.sv.toLocaleString()}`;
 
 // ------------------------------------------------------------------ filters
 const listable = () =>            // hard-only twins are reached by the toggle
@@ -1026,7 +1198,6 @@ function renderList() {
       <span class="rowmain">
         <span class="rowname">${eName(e)}${tags}</span>
         <span class="rowmeta">${eSub(e) ? eSub(e) + ' · ' : ''}${whereText(e)}
-          · SV ${e.sv === null ? '?' : e.sv.toLocaleString()}
           ${e.w !== null ? '· ' + e.w + '%' : ''}</span>
       </span>
       <span class="rowdrops${drops ? '' : ' none'}">${drops ? drops + '▪' : '—'}</span>
@@ -1109,30 +1280,34 @@ function recompute() {
     $('drops').innerHTML = '<p class="empty">This enemy has no item drops.</p>';
   } else {
     $('drops').innerHTML = `<table>
-      <thead><tr><th>Slot</th><th>Item</th><th>Base</th><th>Owned</th>
-        <th>P(slot)</th><th>P(drop|slot)</th><th>P(drop/kill)</th>
-        <th>Kills/drop</th></tr></thead>
+      <thead><tr><th class="detail">Slot</th><th>Item</th>
+        <th class="detail">Base</th><th>Owned</th>
+        <th class="detail">P(slot)</th><th class="detail">P(drop|slot)</th>
+        <th><span class="wide">P(drop/kill)</span><span class="narrow">Drop</span></th>
+        <th class="detail2"><span class="wide">Kills/drop</span><span class="narrow">Kills</span></th>
+      </tr></thead>
       <tbody>${r.rows.map(x => `<tr>
-        <td>${x.slot}</td>
+        <td class="detail">${x.slot}</td>
         <td class="item">${icon(x.type, x.num)}
           <span class="iname"><b>${itemName(x.type, x.num)}</b>
           <small>${statLine(ITEM(x.type, x.num) || {t: x.type}, x.owned)}</small>
           </span></td>
-        <td>${(x.base * 100).toFixed(2)}%</td>
+        <td class="detail">${(x.base * 100).toFixed(2)}%</td>
         <td><span class="stepper">
           <button type="button" data-step="-1" aria-label="one fewer">&minus;</button>
           <input type="number" min="0" max="99" value="${x.owned}"
                  data-key="${x.type}:${x.num}" class="owned">
           <button type="button" data-step="1" aria-label="one more">+</button>
         </span></td>
-        <td>${fmtPct(x.pSlot, 2)}</td>
-        <td>${fmtPct(x.pCond)}</td>
+        <td class="detail">${fmtPct(x.pSlot, 2)}</td>
+        <td class="detail">${fmtPct(x.pCond)}</td>
         <td class="hi">${fmtPct(x.p)}</td>
-        <td>${fmtKills(x.p)}</td>
+        <td class="detail2">${fmtKills(x.p)}</td>
       </tr>`).join('')}
-      <tr class="total"><td colspan="6">TOTAL (any item)</td>
+      <tr class="total"><td class="detail" colspan="4"></td>
+        <td colspan="2">TOTAL (any item)</td>
         <td class="hi">${fmtPct(r.total)}</td>
-        <td>${fmtKills(r.total)}</td>
+        <td class="detail2">${fmtKills(r.total)}</td>
       </tr></tbody></table>`;
     $('drops').querySelectorAll('.owned').forEach(inp => {
       const set = (v) => {
@@ -1442,8 +1617,9 @@ function renderItems() {
   $('itable').innerHTML = `<table>
     <thead><tr><th class="numcol">#</th><th>Item</th>
       <th class="statcell">Stats / effect</th>
-      ${showRank ? '<th>Rank</th>' : ''}
-      <th>Price</th><th class="dropcol">Dropped by</th></tr></thead>
+      ${showRank ? '<th class="detail">Rank</th>' : ''}
+      <th class="detail">Price</th>
+      <th class="dropcol">Dropped by</th></tr></thead>
     <tbody>${list.map(it => {
       const dr = DROPPERS[it.t + ':' + it.n] || [];
       const icons = dr.map(d => {
@@ -1461,9 +1637,9 @@ function renderItems() {
         <td class="item">${icon(it.t, it.n)}
           <span class="iname"><b>${it.en}</b><small>${it.ja}</small></span></td>
         <td class="statcell">${statLine(it, times)}</td>
-        ${showRank ? `<td>${STARS(it.rank) || '—'}</td>` : ''}
-        <td>${it.price ? it.price.toLocaleString() + 'G' : '—'}</td>
-        <td class="drops-by">${icons || '—'}</td>
+        ${showRank ? `<td class="detail">${STARS(it.rank) || '—'}</td>` : ''}
+        <td class="detail">${it.price ? it.price.toLocaleString() + 'G' : '—'}</td>
+        <td class="drops-by">${icons || '<span class="nodrop">—</span>'}</td>
       </tr>`;
     }).join('')}</tbody></table>`;
 
@@ -1511,6 +1687,27 @@ function mapMatches(label, mp) {
 // none of them.
 const mapName = (k) => (MAPDB[k] && MAPDB[k].label)
   || (MAPDB[k] && MAPDB[k].members ? 'Maps ' + k : 'Map ' + k);
+
+// "World 1", not the key or the list of map numbers behind it
+const worldName = (k) => {
+  const full = mapName(k);
+  const m = /^(World \d+)/.exec(full);
+  return m ? m[1] : full;
+};
+
+// Several zones can share an LV. Where they sit on different member maps of a
+// composite, the map tells them apart; otherwise they are numbered from one in
+// the order they appear. The game's own stage index is never shown.
+function zoneSuffix(m, z) {
+  const v = (m.svs || []).find(o => o.z === z);
+  if (!v) return '';
+  const same = m.svs.filter(o => o.sv === v.sv);
+  if (same.length <= 1) return '';
+  const mm = o => (o.maps || []).join('/');
+  if (mm(v) && same.every(o => o.z === v.z || mm(o) !== mm(v)))
+    return 'map ' + mm(v);
+  return '#' + (same.findIndex(o => o.z === v.z) + 1);
+}
 
 // a map folded into a composite is reached through it, not on its own
 const mapKey = (k) => (MAPDB[k] && MAPDB[k].group) ? MAPDB[k].group : String(k);
@@ -1643,6 +1840,9 @@ function bindPanZoom(m) {
   // A drag pans; anything shorter than a few pixels is still a click, so
   // zones and bosses stay selectable.
   let from = null, moved = false, swallow = false;
+  // every finger currently down, so two of them can be told from one
+  const pts = new Map();
+  let pinch = null;
 
   // The click that ends a drag must not also select whatever is under it.
   // This is a flag rather than a one-shot listener because a drag does not
@@ -1653,8 +1853,55 @@ function bindPanZoom(m) {
     ev.stopPropagation();
   }, true);
 
+  const local = (ev) => {
+    const r = wrap.getBoundingClientRect();
+    return { x: ev.clientX - r.left, y: ev.clientY - r.top };
+  };
+  const pair = () => {
+    const [a, b] = [...pts.values()];
+    return { cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2,
+             d: Math.hypot(a.x - b.x, a.y - b.y) };
+  };
+
+  // Two fingers zoom about the point between them, which also pans as that
+  // point moves. Touch devices have no wheel, so without this the map opens at
+  // one scale and stays there.
+  const startPinch = () => {
+    const p = pair();
+    if (p.d < 1) return;
+    pinch = { d: p.d, s: mapView.s,
+              mx: (p.cx - mapView.x) / mapView.s,
+              my: (p.cy - mapView.y) / mapView.s };
+    // a pinch is never a click, so holding both pointers is safe here
+    pts.forEach((_, id) => {
+      try { wrap.setPointerCapture(id); } catch (_) {}
+    });
+    from = null;
+    moved = true;                       // so the closing tap is swallowed
+    hideEtip();
+    document.body.classList.add('mapdrag');
+  };
+
+  const movePinch = () => {
+    const p = pair();
+    if (!pinch || p.d < 1) return;
+    const v = viewBox();
+    const fit = fitScale(panMap, v);
+    const s = Math.min(fit * 16, Math.max(fit, pinch.s * (p.d / pinch.d)));
+    mapView = clampView(panMap,
+      { s, x: p.cx - pinch.mx * s, y: p.cy - pinch.my * s }, v);
+    applyView(panMap);
+  };
+
   wrap.addEventListener('pointerdown', (ev) => {
-    if (ev.button !== 0 || ev.target.closest('.mapzoom')) return;
+    if (ev.target.closest('.mapzoom')) return;
+    if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+    pts.set(ev.pointerId, local(ev));
+    // Capture is taken once a gesture begins, never here: capturing on
+    // pointerdown retargets the click that follows to this element, and the
+    // zone under the finger never hears about it.
+    if (pts.size === 2) { startPinch(); return; }
+    if (pts.size > 2) { from = null; return; }
     from = { x: ev.clientX, y: ev.clientY, vx: mapView.x, vy: mapView.y,
              id: ev.pointerId };
     moved = false;
@@ -1662,13 +1909,14 @@ function bindPanZoom(m) {
   });
 
   wrap.addEventListener('pointermove', (ev) => {
+    if (pts.has(ev.pointerId)) pts.set(ev.pointerId, local(ev));
+    if (pts.size >= 2) { if (pts.size === 2) movePinch(); return; }
     if (!from) return;
     const dx = ev.clientX - from.x, dy = ev.clientY - from.y;
     if (!moved && Math.abs(dx) + Math.abs(dy) < 4) return;
     if (!moved) {
-      // now that it is a drag rather than a click, keep receiving moves even
-      // if the pointer leaves the box, and stop the page selecting text under
-      // it. Capture can refuse a pointer, and panning works without it.
+      // now that it is a drag rather than a click, keep receiving moves if the
+      // pointer leaves the box and stop the page selecting text under it
       try { wrap.setPointerCapture(ev.pointerId); } catch (_) {}
       document.body.classList.add('mapdrag');
     }
@@ -1681,16 +1929,27 @@ function bindPanZoom(m) {
   });
 
   const end = (ev) => {
-    if (!from) return;
-    swallow = moved;
-    from = null;
-    wrap.classList.remove('panning');
-    document.body.classList.remove('mapdrag');
+    if (ev && ev.pointerId !== undefined) pts.delete(ev.pointerId);
     try {
       if (ev && ev.pointerId !== undefined &&
           wrap.hasPointerCapture(ev.pointerId))
         wrap.releasePointerCapture(ev.pointerId);
     } catch (_) {}
+    if (pts.size >= 2) { startPinch(); return; }   // a third finger lifted
+    if (pts.size === 1) {                          // one finger left: resume pan
+      pinch = null;
+      const [only] = [...pts.entries()];
+      const r = wrap.getBoundingClientRect();
+      from = { x: only[1].x + r.left, y: only[1].y + r.top,
+               vx: mapView.x, vy: mapView.y, id: only[0] };
+      return;
+    }
+    pinch = null;
+    if (!from && !moved) return;
+    swallow = moved;
+    from = null;
+    wrap.classList.remove('panning');
+    document.body.classList.remove('mapdrag');
   };
   wrap.addEventListener('pointerup', end);
   wrap.addEventListener('pointercancel', end);
@@ -1713,17 +1972,13 @@ function renderMap() {
 
   const dupSV = {};
   m.svs.forEach(v => { dupSV[v.sv] = (dupSV[v.sv] || 0) + 1; });
-  // When a stage value appears more than once, say which zone this is. Across
-  // a composite that is the member map; within one map (57) it is the level.
+  // When an LV appears more than once, say which of them this is. Across a
+  // composite that is the member map; within one map it is just the order they
+  // come in, counted from one, rather than the game's own index.
   const zLabel = (v) => {
-    const base = `SV ${v.sv.toLocaleString()}`;
-    if (dupSV[v.sv] <= 1) return base;
-    const mm = z => (z.maps || []).join('/');
-    const rivals = m.svs.filter(o => o.sv === v.sv && o.z !== v.z);
-    if (mm(v) && rivals.every(o => mm(o) !== mm(v)))
-      return `${base} <u>map ${mm(v)}</u>`;
-    const lv = zoneParts(v.z).lv;
-    return lv === null ? base : `${base} <u>#${lv}</u>`;
+    const base = `LV ${v.sv.toLocaleString()}`;
+    const suffix = zoneSuffix(m, v.z);
+    return suffix ? `${base} <u>${suffix}</u>` : base;
   };
   $('mapLegend').innerHTML = m.svs.map(v => `
     <button class="lvkey${svSel === v.z ? ' on' : ''}" data-sv="${v.z}">
@@ -1821,8 +2076,15 @@ function renderMap() {
      </div>`;
   bindPanZoom(m);
 
-  const pick = (z) => { svSel = svSel === z ? null : z;
-                        renderMap(); renderZone(); };
+  const pick = (z) => {
+    svSel = svSel === z ? null : z;
+    renderMap();
+    renderZone();
+    // stacked on a narrow screen the zone panel sits below the map, so a tap
+    // on the map would otherwise seem to do nothing
+    if (svSel !== null && window.matchMedia('(max-width:980px)').matches)
+      $('mapZone').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  };
   $('mapWrap').querySelectorAll('.lvcell').forEach(d =>
     d.onclick = () => pick(d.dataset.sv));
   $('mapWrap').querySelectorAll('.lvcap').forEach(d =>
@@ -1979,9 +2241,9 @@ function renderZone() {
   $('mapZone').innerHTML = `
     <div class="zonehead">
       <div><b>AREA LV: ${zsv.toLocaleString()}${
-        zlv === null ? '' : ' <span class="zn">#' + zlv + '</span>'}</b>
-        <small>${m.members ? 'Maps ' + mapSel : 'Map ' + mapSel} ·
-          ${list.length} enemies</small></div>
+        zoneSuffix(m, svSel)
+          ? ' <span class="zn">' + zoneSuffix(m, svSel) + '</span>' : ''}</b>
+        <small>${worldName(mapSel)} · ${list.length} enemies</small></div>
     </div>
     <label class="zbonus">BONUS
       <select id="zBonusSel"${fixed !== undefined ? ' disabled' : ''}>
@@ -2026,7 +2288,7 @@ function renderZone() {
           <span><b>${eName(e)}${e.b !== null
             ? ` <span class="badge boss">Boss ${e.b}</span>` : ''}</b>
           <small>${eSub(e) ? eSub(e) + ' · ' : ''}${
-            e.lv === null ? '' : 'Map ' + e.mp + ' · Lv ' + e.lv + ' · '}${
+            e.lv === null ? '' : 'Map ' + e.mp + ' · '}${
             e.w !== null ? e.w + '% spawn' : 'boss'}</small></span>
         </button>
         ${rows ? `<div class="zdrops">${rows}</div>` : ''}
