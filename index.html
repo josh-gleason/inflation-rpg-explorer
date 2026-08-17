@@ -8,14 +8,14 @@
 :root{
   --bg:#f6f7f9; --panel:#ffffff; --ink:#1b2430; --dim:#6b7684;
   --line:#e3e7ec; --grid:#eceff3; --accent:#4472c4; --hi:#0b7a3b;
-  --chip:#eef2f8; --sqa:#9aa4b0; --sqb:#8b95a2;
+  --chip:#eef2f8; --sel:#d7e3f7; --sqa:#9aa4b0; --sqb:#8b95a2;
   --cursor:#98a2ae; --zone:#ffffff;
 }
 @media (prefers-color-scheme: dark){
   :root{
     --bg:#12161c; --panel:#1a2029; --ink:#e6ebf2; --dim:#93a0b1;
     --line:#2a323d; --grid:#232b35; --accent:#7aa2e8; --hi:#5fd08a;
-    --chip:#232b35; --sqa:#79838f; --sqb:#6b7480;
+    --chip:#232b35; --sel:#2c3d59; --sqa:#79838f; --sqb:#6b7480;
     --cursor:#7d8896; --zone:#f2f6ff;
   }
 }
@@ -57,7 +57,7 @@ header{padding:16px 20px;border-bottom:1px solid var(--line);background:var(--pa
      character and find-an-enemy panels are over a screen tall together, so
      leaving them first buries the card and the zone panel below the fold. */
   #viewMaps > .col{order:2}
-  /* The calculator wants LUK above the rates, so they visibly react while it
+  /* The calculator wants LUC above the rates, so they visibly react while it
      is dragged, but the enemy picker still below them. display:contents lets
      the two panels be ordered separately without a second layout. */
   #viewCalc > .col{display:contents}
@@ -105,8 +105,11 @@ input[type=checkbox]{width:auto;margin-right:6px}
   padding:6px;border:0;border-bottom:1px solid var(--line);background:none;
   color:inherit;cursor:pointer;font:inherit}
 .row:hover{background:var(--chip)}
-.row.on{background:var(--accent);color:#fff}
-.row.on .rowmeta,.row.on .rowdrops{color:#dce7fb}
+/* A tint with the ordinary ink on it, marked down the edge. Filling the row
+   with the accent and writing on it in white is hard to read, the pale blue of
+   the dark palette especially. */
+.row.on{background:var(--sel);box-shadow:inset 3px 0 var(--accent)}
+.row.on .rowname{font-weight:700}
 .row img,.hero{
   background-image:
     linear-gradient(45deg,var(--sqb) 25%,transparent 25%,transparent 75%,
@@ -206,6 +209,8 @@ td.item{display:flex;align-items:center;gap:9px}
   color:var(--ink);padding-right:10px}
 .numcol.hard{color:#e05a4b}
 thead .numcol{color:var(--dim)}
+#lukCap{margin:8px 0 0;font-size:12px;color:var(--dim);line-height:1.4}
+#lukCap b{color:var(--ink);font-variant-numeric:tabular-nums}
 .chartbox{position:relative;margin-top:14px}
 canvas{width:100%;height:300px;display:block}
 canvas.ov{position:absolute;inset:0;pointer-events:none}
@@ -252,8 +257,8 @@ summary{cursor:pointer;color:var(--dim);font-size:12px;
 .lvkey i{width:11px;height:11px;border-radius:3px;display:inline-block}
 .lvkey b{font-variant-numeric:tabular-nums}
 .lvkey span{color:var(--dim)}
-.lvkey.on{background:var(--accent);border-color:var(--accent);color:#fff}
-.lvkey.on span{color:rgba(255,255,255,.85)}
+.lvkey.on{background:var(--sel);border-color:var(--accent);color:var(--ink);
+  font-weight:600}
 .mapwrap{max-width:1060px}
 #mapTravel{max-width:1060px;margin-bottom:12px;display:flex;flex-direction:column;
   gap:7px}
@@ -310,7 +315,23 @@ summary{cursor:pointer;color:var(--dim);font-size:12px;
 .badge.go:hover,.badge.go:focus-visible{border-color:var(--accent);
   background:var(--chip);text-decoration:underline}
 .zdrops{display:flex;flex-direction:column;gap:3px;margin:3px 0 2px 42px}
-.zdrop{display:flex;align-items:center;gap:6px;font-size:12px}
+.zdrop{display:flex;align-items:center;gap:6px;font-size:12px;
+  border:0;background:none;padding:1px 4px 1px 0;margin:0 0 0 -4px;
+  color:inherit;font-family:inherit;text-align:left;cursor:pointer;
+  border-radius:5px;width:fit-content}
+.zdrop:hover em,.zdrop:focus-visible em{color:var(--accent);
+  text-decoration:underline}
+.iname .iopen{border:0;background:none;padding:0;margin:0;font:inherit;
+  font-weight:600;color:inherit;cursor:pointer;text-align:left}
+/* the picture beside the name goes to the same place, so it takes the click
+   too; the name already announces it, so this one stays out of the tab order */
+td.item .ipic{border:0;background:none;padding:0;margin:0;display:flex;
+  cursor:pointer;border-radius:6px}
+td.item .ipic:hover{outline:2px solid var(--accent);outline-offset:1px}
+.iname .iopen:hover,.iname .iopen:focus-visible{color:var(--accent);
+  text-decoration:underline}
+#itable tr.found{animation:found 2s ease-out}
+@keyframes found{from{background:var(--sel)}to{background:transparent}}
 .zdrop em{font-style:normal}
 .zmode{display:block;font-size:9px;text-transform:uppercase;
   letter-spacing:.08em;color:var(--dim);margin:5px 0 1px;
@@ -465,7 +486,7 @@ img.mapimg.over{position:absolute;inset:0;width:100%;height:100%}
 .subtabs{display:flex;gap:4px;margin-bottom:12px}
 .subtab{border:1px solid var(--line);background:var(--bg);color:var(--dim);
   padding:5px 14px;border-radius:6px;cursor:pointer;font:inherit;font-size:13px}
-.subtab.on{background:var(--accent);border-color:var(--accent);color:#fff;
+.subtab.on{background:var(--sel);border-color:var(--accent);color:var(--ink);
   font-weight:600}
 .dropper{border:0;background:none;padding:0;margin:0 3px 3px 0;cursor:pointer;
   line-height:0;border-radius:4px}
@@ -486,7 +507,7 @@ img.mapimg.over{position:absolute;inset:0;width:100%;height:100%}
    columns marked .detail are the working-out rather than the answer, so they
    step aside and what is left fits. */
 .narrow{display:none}
-/* Whenever the columns stack, LUK and the run flag share a line so the panel
+/* Whenever the columns stack, LUC and the run flag share a line so the panel
    above the rates is two rows rather than three. The slider stays directly
    under the box it drives, which is why this is placement rather than markup
    order. */
@@ -650,8 +671,9 @@ img.mapimg.over{position:absolute;inset:0;width:100%;height:100%}
   <div class="col">
     <section class="panel charpanel">
       <h3>Your character</h3>
-      <div class="lukbox"><label for="luk">LUK (luk + eluk)</label>
-        <input id="luk" type="number" value="10000" min="0"></div>
+      <div class="lukbox"><label for="luk">Total LUC</label>
+        <input id="luk" type="text" inputmode="numeric" value="10,000"
+               title="Your LUC with equipment counted in"></div>
       <div class="sp">
         <input id="lukRange" type="range" min="0" max="7" step="0.005" value="5.4">
       </div>
@@ -732,12 +754,14 @@ img.mapimg.over{position:absolute;inset:0;width:100%;height:100%}
     <details class="panel sp" id="sweep">
       <summary><h3>Luck sweep</h3></summary>
       <div class="grid2">
-        <div><label>LUK range — <span id="sweepMaxOut"></span></label>
+        <div><label>LUC range — <span id="sweepMaxOut"></span></label>
           <div class="dual">
             <div class="dualtrack"><div class="dualfill" id="sweepFill"></div></div>
             <input id="sweepMin" type="range" min="0" step="1" value="0">
             <input id="sweepMax" type="range" min="0" step="1" value="8">
-          </div></div>
+          </div>
+          <p id="lukCap" title="More LUC than this does nothing for drops.
+            Gold has no such ceiling."></p></div>
         <div style="margin-top:12px">
           <div class="check" style="margin-top:0">
             <input type="checkbox" id="yKills">
@@ -749,12 +773,12 @@ img.mapimg.over{position:absolute;inset:0;width:100%;height:100%}
       <div class="chartbox">
         <canvas id="c1"></canvas><canvas id="c1ov" class="ov"></canvas>
       </div>
-      <div class="chartbox">
+      <div class="chartbox" id="c3box">
         <canvas id="c3"></canvas><canvas id="c3ov" class="ov"></canvas>
       </div>
 
       <details id="flvBox">
-        <summary>Final Luck Value vs LUK</summary>
+        <summary>Final Luck Value vs LUC</summary>
         <div class="chartbox">
           <canvas id="c2"></canvas><canvas id="c2ov" class="ov"></canvas>
         </div>
@@ -874,7 +898,7 @@ function beitOf(fepv) {
   return tr((fepv * 3 + 4000) / 5);
 }
 
-// k(luk) is piecewise linear: each capped LUK bonus ramps, then saturates.
+// k(luc) is piecewise linear: each capped LUC bonus ramps, then saturates.
 const RAMPS = [[2000, 0.15, 0.16], [25000, 0.15, 0.16], [300000, 0.30, 0.31],
                [500000, 0.35, 0.36], [1000000, 0.15, 0.16]];
 const KSEG = [0, 2000, 25000, 300000, 500000, 1000000, Infinity];
@@ -1056,7 +1080,7 @@ function itemStats(it, times) {
 }
 
 // ---- where the curve changes shape ---------------------------------------
-// Drop rate is piecewise *rational* in LUK, not piecewise linear: P(drop|slot)
+// Drop rate is piecewise *rational* in LUC, not piecewise linear: P(drop|slot)
 // is linear in FLV, but the slot probabilities carry 1/c terms. Every kink is
 // exactly solvable, and these are all of them.
 function breakpoints(o, maxLuk) {
@@ -1072,9 +1096,9 @@ function breakpoints(o, maxLuk) {
     out.push({ luk, label });
   };
 
-  // 1. k(luk) slope changes as each capped LUK bonus saturates
+  // 1. k(luc) slope changes as each capped LUC bonus saturates
   RAMPS.forEach(([lim]) =>
-    push(lim, `LUK ${lim.toLocaleString()} — bonus saturates`));
+    push(lim, `LUC ${lim.toLocaleString()} — bonus saturates`));
 
   // 2. the two FLV gates and the 3.5 ceiling
   push(lukForFlv(1, beit), 'FLV 1 — gate (k+1.7)/2.7 engages');
@@ -1471,7 +1495,12 @@ function renderList() {
     const drops = rowItems(e).length;
     const tags = (e.b !== null ? '<span class="tag boss">boss</span>' : '')
       ;
-    return `<button class="row${sel === i ? ' on' : ''}" data-i="${i}">
+    // Marked as chosen only while the list is showing the same mode the card
+    // is. Otherwise the row and the card describe different fights, and the
+    // highlight claims they are the same one.
+    const chosen = sel === i && listHard() === hardOn();
+    return `<button class="row${chosen ? ' on' : ''}" data-i="${i}"
+      ${chosen ? 'aria-current="true"' : ''}>
       <img class="${listHard() ? 'hardsprite' : ''}"
            src="assets/${e.sp}.png" alt="" loading="lazy">
       <span class="rowmain">
@@ -1541,7 +1570,7 @@ function opts() {
     gold: goldOf({ g: e.g, gf: e.gf }, +$('svIn').value || 0),
     sv: +$('svIn').value || 0,
     // BattleItemMana.as:83 only ever tests `Highlv < 2000`
-    luk: +$('luk').value || 0, highLv: $('hl2000').checked ? 2000 : 0,
+    luk: lukValue(), highLv: $('hl2000').checked ? 2000 : 0,
     // BattleVar.as:128 -- EneExp doubles again when BossSyu < 32. Ordinary
     // enemies pass BossSyu = -1, fixed bosses are 0-28, roaming bosses 32+.
     hard: hardOn(), bossX2: e.b === null || e.b < 32,
@@ -1577,7 +1606,13 @@ function recompute() {
     <div><label>Gold</label><b>${fmtNum(r.gold)}</b></div>
     <div class="lit"><label>Gold / kill</label>
       <b>${r.goldDrop.toLocaleString()}</b>
-      <small>×${r.gUp.toFixed(2)} from LUK</small></div>`;
+      <small>×${r.gUp.toFixed(2)} from LUC</small></div>`;
+
+  // Past a point more LUC buys nothing: FLV stops at 3.5, and every drop rate
+  // and slot share is a function of FLV alone. Gold has no such ceiling -- its
+  // luk/BEIT term keeps climbing -- so this is about drops only.
+  $('lukCap').innerHTML = !o.items.length ? '' :
+    `LUC cap <b>${Math.ceil(lukForFlv(3.5, r.kk.beit)).toLocaleString()}</b>`;
 
   const TYPES = ['weapon', 'armor', 'accessory'];
   if (!o.items.length) {
@@ -1592,8 +1627,12 @@ function recompute() {
       </tr></thead>
       <tbody>${r.rows.map(x => `<tr>
         <td class="detail">${x.slot}</td>
-        <td class="item">${icon(x.type, x.num)}
-          <span class="iname"><b>${itemName(x.type, x.num)}</b>
+        <td class="item"><button class="iopen ipic" data-t="${x.type}"
+            data-n="${x.num}" tabindex="-1" aria-hidden="true"
+            >${icon(x.type, x.num)}</button>
+          <span class="iname"><button class="iopen" data-t="${x.type}"
+            data-n="${x.num}" aria-label="Show ${esc(itemName(x.type, x.num))
+            } in the item list">${itemName(x.type, x.num)}</button>
           <small>${statLine(ITEM(x.type, x.num) || {t: x.type}, x.owned)}</small>
           </span></td>
         <td class="detail">${(x.base * 100).toFixed(2)}%</td>
@@ -1613,6 +1652,8 @@ function recompute() {
         <td class="hi">${fmtPct(r.total)}</td>
         <td class="detail2">${fmtKills(r.total)}</td>
       </tr></tbody></table>`;
+    $('drops').querySelectorAll('.iopen').forEach(b =>
+      b.onclick = () => showItem(+b.dataset.t, +b.dataset.n));
     $('drops').querySelectorAll('.owned').forEach(inp => {
       const set = (v) => {
         const n = Math.min(99, Math.max(0, v));
@@ -1673,8 +1714,22 @@ function plot(id, data, series, opt) {
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
   g.clearRect(0, 0, w, h);
 
-  const L = 70, R = 16, T = 16, B = 44;
-  const pw = w - L - R, ph = h - T - B;
+  g.font = '11px ui-sans-serif, system-ui, sans-serif';
+  const L = 70, R = 16, B = 44;
+  const pw = w - L - R;
+  // The legend sits inside the top of the plot. Named after items rather than
+  // slots it can outrun the width, so it wraps and the plot starts lower
+  // instead of having lines drawn across it.
+  const legend = [[]];
+  let lw = 0;
+  series.forEach(sr => {
+    const need = 26 + g.measureText(sr.name).width;
+    if (lw && lw + need > pw) { legend.push([]); lw = 0; }
+    legend[legend.length - 1].push(sr);
+    lw += need;
+  });
+  const T = 16 + (legend.length - 1) * 14;
+  const ph = h - T - B;
   const xMax = opt.xMax || 1;
   const xMin = opt.xMin || 0;
   const xSpan = (xMax - xMin) || 1;
@@ -1705,7 +1760,6 @@ function plot(id, data, series, opt) {
   const X = (v) => L + pw * ((v - xMin) / xSpan);
 
   const ink = css('--ink'), grid = css('--grid'), dim = css('--dim');
-  g.font = '11px ui-sans-serif, system-ui, sans-serif';
 
   g.strokeStyle = grid; g.lineWidth = 1; g.fillStyle = dim;
   ticks.forEach(v => {
@@ -1714,6 +1768,17 @@ function plot(id, data, series, opt) {
     g.textAlign = 'right'; g.textBaseline = 'middle';
     g.fillText(opt.yfmt(v), L - 8, y);
   });
+  // turned on its side beside the numbers, clear of the widest of them
+  if (opt.ylab) {
+    const wid = Math.max(...ticks.map(v => g.measureText(opt.yfmt(v)).width));
+    g.save();
+    g.translate(Math.max(11, L - 16 - wid), T + ph / 2);
+    g.rotate(-Math.PI / 2);
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(opt.ylab, 0, 0);
+    g.restore();
+    g.textAlign = 'right'; g.textBaseline = 'middle';
+  }
   for (let i = 0; i <= 4; i++) {
     const v = xMin + xSpan * i / 4, x = X(v);
     g.beginPath(); g.moveTo(x, T); g.lineTo(x, T + ph); g.stroke();
@@ -1741,19 +1806,23 @@ function plot(id, data, series, opt) {
   });
   g.setLineDash([]);
 
-  let lx = L + 6;
-  series.forEach(s => {
-    g.fillStyle = s.color; g.fillRect(lx, T + 4, 14, 3);
-    g.fillStyle = dim; g.textAlign = 'left'; g.textBaseline = 'middle';
-    g.fillText(s.name, lx + 19, T + 6);
-    lx += 26 + g.measureText(s.name).width;
+  let ly = T + 6;
+  legend.forEach(row => {
+    let lx = L + 6;
+    row.forEach(sr => {
+      g.fillStyle = sr.color; g.fillRect(lx, ly - 2, 14, 3);
+      g.fillStyle = dim; g.textAlign = 'left'; g.textBaseline = 'middle';
+      g.fillText(sr.name, lx + 19, ly);
+      lx += 26 + g.measureText(sr.name).width;
+    });
+    ly += 14;
   });
 
   PLOTS[id] = { data, series, X, Y, L, T, pw, ph, xMin, xMax, opt, w, h };
   attachCursor(id);
 }
 
-// ---- hover cursor: vertical line at the LUK, horizontal line per series
+// ---- hover cursor: vertical line at the LUC, horizontal line per series
 function attachCursor(id) {
   const canvas = $(id);
   if (canvas._wired) return;
@@ -1774,7 +1843,7 @@ function attachCursor(id) {
     });
     drawCursor(id, best);
     const d = st.data[best];
-    tip.innerHTML = `<b>LUK ${Math.round(d.x).toLocaleString()}</b>` +
+    tip.innerHTML = `<b>LUC ${Math.round(d.x).toLocaleString()}</b>` +
       st.series.map(s => {
         const v = d[s.key];
         return `<span><i style="background:${s.color}"></i>${s.name}
@@ -1842,15 +1911,25 @@ function drawCharts(o) {
     return d;
   });
 
+  // the slots are numbered in the data, but a reader knows them by what comes
+  // out of them
+  const slotName = (i) => o.items[i]
+    ? itemName(o.items[i][0], o.items[i][1]) : `Slot ${i + 1}`;
+
   const drop = [];
   for (let i = 0; i < n; i++)
-    drop.push({ key: 'i' + i, name: `Slot ${i + 1}`, color: COL[i] });
-  if (n) drop.push({ key: 'total', name: 'Any item', color: TOTALCOL,
-                     width: 2.5, dash: true });
+    drop.push({ key: 'i' + i, name: slotName(i), color: COL[i] });
+  // With one item the total is that item, and a second line drawn over the
+  // first says nothing. Same for the share chart: one slot always takes all of
+  // it, so there is nothing to compare.
+  if (n > 1) drop.push({ key: 'total', name: 'Any item', color: TOTALCOL,
+                         width: 2.5, dash: true });
+  $('c3box').hidden = n < 2;
 
   if (n) {
     plot('c1', data, drop, {
       xMin: min, xMax: max, logY,
+      ylab: kills ? 'Kills per drop' : 'Chance per kill',
       yfmt: v => kills ? (v >= 1000 ? Math.round(v / 1000) + 'k'
                                     : String(Math.round(v)))
                        : (v * 100).toFixed(logY && v < 0.001 ? 3 : 1) + '%',
@@ -1859,11 +1938,13 @@ function drawCharts(o) {
                                         maximumFractionDigits: 2 }) + ' kills'
         : (v * 100).toFixed(4) + '%',
     });
-    plot('c3', data,
+    if (n > 1) plot('c3', data,
          Array.from({ length: n }, (_, i) =>
-           ({ key: 's' + i, name: `Slot ${i + 1}`, color: COL[i] })),
-         { xMin: min, xMax: max, yfmt: v => (v * 100).toFixed(0) + '%',
+           ({ key: 's' + i, name: slotName(i), color: COL[i] })),
+         { xMin: min, xMax: max, ylab: 'Chance the slot is picked',
+           yfmt: v => (v * 100).toFixed(0) + '%',
            tipfmt: v => (v * 100).toFixed(2) + '%' });
+    else delete PLOTS.c3;
   } else {
     ['c1', 'c1ov', 'c3', 'c3ov'].forEach(i => {
       const c = $(i); c.getContext('2d').clearRect(0, 0, c.width, c.height);
@@ -1872,8 +1953,8 @@ function drawCharts(o) {
   }
 
   plot('c2', data, [{ key: 'flv', name: 'FLV', color: COL[0] }],
-       { xMin: min, xMax: max, yfmt: v => v.toFixed(2),
-         tipfmt: v => v.toFixed(2) });
+       { xMin: min, xMax: max, ylab: 'Final Luck Value',
+         yfmt: v => v.toFixed(2), tipfmt: v => v.toFixed(2) });
 
 }
 
@@ -1900,6 +1981,29 @@ const DROPPERS = (() => {
 })();
 
 let itemType = 0;
+
+// Open the item list on one item: the right kind of thing, with whatever
+// filter would otherwise hide it turned off, and the row brought into view.
+// A hard-mode item is invisible unless hard-mode items are shown, and a search
+// left in the box would hide it just as thoroughly.
+function showItem(t, n) {
+  const it = ITEM(t, n);
+  if (!it) return;
+  itemType = t;
+  document.querySelectorAll('.subtab').forEach(x =>
+    x.classList.toggle('on', +x.dataset.t === t));
+  if (it.hard) $('iHard').checked = true;
+  const q = $('iSearch').value.trim().toLowerCase();
+  if (q && !it.en.toLowerCase().includes(q) && !it.ja.includes(q))
+    $('iSearch').value = '';
+  showTab('items');
+  const row = $('itable').querySelector(`tr[data-k="${t}:${n}"]`);
+  if (!row) return;
+  row.scrollIntoView({ block: 'center' });
+  // it can land anywhere in a long list, so say which one was asked for
+  row.classList.add('found');
+  setTimeout(() => row.classList.remove('found'), 2000);
+}
 
 function renderItems() {
   const ty = itemType;
@@ -1936,7 +2040,7 @@ function renderItems() {
 >
           <img src="assets/${e.sp}.png" alt="${eName(e)}"></button>`;
       }).join('');
-      return `<tr>
+      return `<tr data-k="${it.t}:${it.n}">
         <td class="numcol${it.hard ? ' hard' : ''}">${it.num}</td>
         <td class="item">${icon(it.t, it.n)}
           <span class="iname"><b>${it.en}</b><small>${it.ja}</small></span></td>
@@ -2608,9 +2712,10 @@ function renderZone() {
   const zsv = zValue(m, svSel), zlv = zoneParts(svSel).lv;
   const TYPES = ['weapon', 'armor', 'accessory'];
   const dropRow = (t, n, hardOnly) => `
-    <span class="zdrop${hardOnly ? ' hardonly' : ''}"
-          data-t="${t}" data-n="${n}" data-ho="${hardOnly ? 1 : 0}">
-      ${icon(t, n, 1)}<em>${itemName(t, n)}</em></span>`;
+    <button class="zdrop${hardOnly ? ' hardonly' : ''}"
+          data-t="${t}" data-n="${n}" data-ho="${hardOnly ? 1 : 0}"
+          aria-label="Show ${esc(itemName(t, n))} in the item list">
+      ${icon(t, n, 1)}<em>${itemName(t, n)}</em></button>`;
 
   const opts = bonusesHere();
   const fixed = roomBonus();
@@ -2719,9 +2824,12 @@ function renderZone() {
   $('mapZone').querySelectorAll('.zjump').forEach(b => {
     b.onclick = (ev) => { ev.stopPropagation(); goMap(b.dataset.go); };
   });
-  $('mapZone').querySelectorAll('.zdrop[data-t]').forEach(d =>
+  $('mapZone').querySelectorAll('.zdrop[data-t]').forEach(d => {
     bindTip(d, (x, y) => showItip(+d.dataset.t, +d.dataset.n, x, y,
-                                  d.dataset.ho === '1')));
+                                  d.dataset.ho === '1'));
+    d.onclick = (ev) => { ev.stopPropagation(); hideEtip();
+                          showItem(+d.dataset.t, +d.dataset.n); };
+  });
   $('mapZone').querySelectorAll('.zenehead').forEach(b => {
     bindPreview(b, +b.dataset.i);
     b.onclick = () => { showTab('calc'); select(+b.dataset.i);
@@ -2790,14 +2898,25 @@ $('fSprite').oninput = renderList;
 ['lo', 'hi'].forEach(w => $('sv' + w.charAt(0).toUpperCase() + w.slice(1))
   .oninput = () => { syncSv(w); renderList(); });
 
+// A six-figure LUC is hard to read as a run of digits, so the box groups it.
+// Not while it is being typed into though: rewriting the text under the caret
+// moves it to the end after every keystroke.
+const lukValue = () => +String($('luk').value).replace(/[^\d]/g, '') || 0;
+const showLuk = (n) => {
+  $('luk').value = document.activeElement === $('luk')
+    ? String(n) : n.toLocaleString();
+};
+
 function sliderFromBox() {
-  const v = Math.max(1, +$('luk').value || 1);
+  const v = Math.max(1, lukValue() || 1);
   $('lukRange').value = Math.min(7, Math.max(0, Math.log10(v)));
 }
 $('luk').oninput = () => { sliderFromBox(); recompute(); };
+$('luk').onfocus = () => { $('luk').value = String(lukValue()); };
+$('luk').onblur = () => { $('luk').value = lukValue().toLocaleString(); };
 $('lukRange').oninput = () => {
   const v = +$('lukRange').value;
-  $('luk').value = v <= 0 ? 0 : Math.round(Math.pow(10, v));
+  showLuk(v <= 0 ? 0 : Math.round(Math.pow(10, v)));
   recompute();
 };
 $('svIn').oninput = () => recompute();
@@ -2832,7 +2951,8 @@ $('yLog').onchange = () => {
 // They meet only when an enemy is chosen from the list, which carries the
 // picker's setting across so the enemy opens in the mode you were browsing.
 const listHard = () => $('hardList').checked;
-$('hard').onchange = () => { syncEnemyControls(); recompute(); };
+$('hard').onchange = () => { syncEnemyControls(); recompute();
+                             renderList(); };
 $('hardList').onchange = renderList;
 $('flvBox').addEventListener('toggle', () => { if (LAST) drawCharts(LAST); });
 window.addEventListener('resize', () => { if (LAST) drawCharts(LAST); });
