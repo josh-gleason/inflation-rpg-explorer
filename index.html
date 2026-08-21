@@ -435,6 +435,7 @@ min-width:0}
 flex-direction:column}
 
 #goldWrap{width:128px}
+#trialWrap{width:132px}
 .healgroup input:disabled{color:var(--dim)}
 
 .healgroup > .healsw{width:auto}
@@ -1279,12 +1280,12 @@ multiplier to ATK, DEF and AGI. Nothing else uses it."></div>
         <div class="sp gline"><div><label>Weapon</label>
             <div class="ipick" id="gWeapon"></div></div>
           <div class="owned"><label for="gWeaponN">Owned</label>
-            <input id="gWeaponN" type="number" min="1" max="99" value="1"></div>
+            <input id="gWeaponN" type="number" min="1" max="10" value="1"></div>
         </div>
         <div class="sp gline"><div><label>Armour</label>
             <div class="ipick" id="gArmor"></div></div>
           <div class="owned"><label for="gArmorN">Owned</label>
-            <input id="gArmorN" type="number" min="1" max="99" value="1"></div>
+            <input id="gArmorN" type="number" min="1" max="10" value="1"></div>
         </div>
         <label class="gaccl">Accessories</label>
         <div class="gslots" id="gAcc"></div>
@@ -1349,12 +1350,18 @@ multiplier to ATK, DEF and AGI. Nothing else uses it."></div>
       to copy an accessory from one slot to another.</p>
   </div>
 
-  <p class="infopop" id="cfgNote" role="tooltip" hidden><em>Max error
-    margin</em> sets how precise the answer is. A tighter (smaller) margin will
-    increase computational load. The <em>Auto Compute</em> option lets the
-    answer automatically update whenever changes are made (stats, equipment,
-    etc.), but is force disabled when margin is smaller than &plusmn;0.1% to
-    avoid too much CPU usage.</p>
+  <div class="infopop" id="cfgNote" role="tooltip" hidden>
+    <p><em>Max error margin</em> sets how precise the answer is, and sampling
+      stops as soon as it is reached. A tighter (smaller) margin will increase
+      computational load. Tick <em>Fixed trials</em> to give a number of
+      battles to run instead, and take whatever margin that many happens to
+      buy.</p>
+    <p>The <em>Auto Compute</em> option lets the answer automatically update
+      whenever changes are made (stats, equipment, etc.), but is force disabled
+      under a &plusmn;0.1% margin, or over 500,000 trials, to avoid too much
+      CPU usage. A long run can be called off with the <em>Stop</em> button it
+      turns into, which also turns <em>Auto Compute</em> off.</p>
+  </div>
 
   <p class="infopop" id="solveNote" role="tooltip" hidden>Click <em>Solve</em>
     to find the approximate minimum number of extra stats to allocate to get at
@@ -1435,9 +1442,15 @@ multiplier to ATK, DEF and AGI. Nothing else uses it."></div>
         aria-controls="cfgNote" aria-label="What these settings do"
         >i</button></summary>
       <div class="cfgrow">
-        <div><label for="simTol">Max error margin &plusmn;%</label>
-          <input id="simTol" type="number" min="0.01" max="5" step="0.01"
-                 value="0.2"></div>
+        <div class="healsw">
+          <div id="tolWrap"><label for="simTol">Max error margin &plusmn;%</label>
+            <input id="simTol" type="number" min="0.01" max="5" step="0.01"
+                   value="0.2"></div>
+          <div id="trialWrap" hidden><label for="simTrials">Trials</label>
+            <input id="simTrials" type="text" inputmode="numeric"
+                   value="200,000"></div>
+          <label class="hardbox plain"><input type="checkbox" id="fixedTrials">
+            <span>Fixed trials</span></label></div>
         <label class="hardbox plain"><input type="checkbox" id="simAuto" checked>
           <span>Auto Compute</span></label>
       </div>
@@ -1607,6 +1620,9 @@ return m;
 
 
 const ownedKey = (type, num) => type + ':' + num;
+
+
+const OWN_CAP = 10;
 
 
 function itemDropRate(base, type, owned, flv, highLv) {
@@ -2419,7 +2435,12 @@ minDmg, maxDmg, swings };
 
 
 
-function winProbability(setup, opts = {}) {
+
+
+
+
+function sampler(setup, opts = {}) {
+
 
 
 
@@ -2430,14 +2451,30 @@ const floorTol = opts.floorTol ?? 0.0005;
 const maxN = opts.maxTrials ?? 400000;
 const block = opts.block ?? 2000;
 const rng = opts.rng || Math.random;
-const sure = certainWin(setup);
-if (sure.safe && !opts.forceSample)
-return { p: 1, lo: 1, hi: 1, trials: 0, method: 'proved' };
-const run = compile(setup);
-let n = 0, wins = 0;
-for (;;) {
+const proved = certainWin(setup).safe && !opts.forceSample;
+const run = proved ? null : compile(setup);
+let n = 0, wins = 0, done = proved;
+return {
+get done() { return done; },
+get trials() { return n; },
+get target() { return proved ? 0 : maxN; },
+
+step(blocks = 1) {
+for (let b = 0; b < blocks && !done; b++) {
 for (let i = 0; i < block; i++, n++)
 if (run(rng).result === 'win') wins++;
+const p = wins / n;
+const z = 1.96, z2 = z * z;
+const half = z / (1 + z2 / n) *
+Math.sqrt(p * (1 - p) / n + z2 / (4 * n * n));
+const want = Math.max(floorTol, Math.min(tol, rel * p));
+if (n >= maxN || (n >= block * 2 && half <= want)) done = true;
+}
+return done;
+},
+result() {
+if (proved) return { p: 1, lo: 1, hi: 1, trials: 0, method: 'proved' };
+if (!n) return { p: 0, lo: 0, hi: 1, trials: 0, method: 'sampled' };
 const p = wins / n;
 
 
@@ -2445,11 +2482,15 @@ const z = 1.96, z2 = z * z;
 const mid = (p + z2 / (2 * n)) / (1 + z2 / n);
 const half = z / (1 + z2 / n) *
 Math.sqrt(p * (1 - p) / n + z2 / (4 * n * n));
-const want = Math.max(floorTol, Math.min(tol, rel * p));
-if (n >= maxN || (n >= block * 2 && half <= want))
 return { p, lo: Math.max(0, mid - half), hi: Math.min(1, mid + half),
 trials: n, method: 'sampled' };
+},
+};
 }
+function winProbability(setup, opts = {}) {
+const s = sampler(setup, opts);
+while (!s.done) s.step(1);
+return s.result();
 }
 
 
@@ -2459,10 +2500,14 @@ trials: n, method: 'sampled' };
 
 
 function winProbabilityMix(parts, opts = {}) {
+return mixOf(parts.filter(({ w }) => w)
+.map(({ setup, w }) => ({ w, r: winProbability(setup, opts) })));
+}
+
+
+function mixOf(parts) {
 let p = 0, half = 0, trials = 0, proved = true;
-for (const { setup, w } of parts) {
-if (!w) continue;
-const r = winProbability(setup, opts);
+for (const { w, r } of parts) {
 p += w * r.p;
 half += w * (r.hi - r.lo) / 2;
 trials += r.trials;
@@ -2494,7 +2539,7 @@ hpLeftOnWin: wins ? hpLeft / wins : 0,
 turnsMedian: at(0.5), turnsP10: at(0.1), turnsP90: at(0.9),
 };
 }
-return {tr, equipStats, playerStats, enemyStats, enePointGet, beitOf, chances, applyBonus, playerHit, enemyHit, simulate, compile, makeFight, runTrials, winProbabilityMix, playHouseki, PLAY_GEM_FAIL, heroKP, certainWin, winProbability};
+return {tr, equipStats, playerStats, enemyStats, enePointGet, beitOf, chances, applyBonus, playerHit, enemyHit, simulate, compile, makeFight, runTrials, winProbabilityMix, mixOf, sampler, playHouseki, PLAY_GEM_FAIL, heroKP, certainWin, winProbability};
 })();
 const $ = (id) => document.getElementById(id);
 let sel = null;
@@ -2869,6 +2914,7 @@ sel = i;
 renderList();
 syncEnemyControls();
 recompute();
+saveSoon(); 
 }
 
 
@@ -2967,7 +3013,7 @@ $('drops').innerHTML = `<table>
         <td class="detail">${(x.base * 100).toFixed(2)}%</td>
         <td><span class="stepper">
           <button type="button" data-step="-1" aria-label="one fewer">&minus;</button>
-          <input type="number" min="0" max="99" value="${x.owned}"
+          <input type="number" min="0" max="10" value="${x.owned}"
                  data-key="${x.type}:${x.num}" class="owned">
           <button type="button" data-step="1" aria-label="one more">+</button>
         </span></td>
@@ -2985,7 +3031,7 @@ $('drops').querySelectorAll('.iopen').forEach(b =>
 b.onclick = () => showItem(+b.dataset.t, +b.dataset.n));
 $('drops').querySelectorAll('.owned').forEach(inp => {
 const set = (v) => {
-const n = Math.min(99, Math.max(0, v));
+const n = Math.min(OWN_CAP, Math.max(0, v));
 inp.value = n;
 owned[inp.dataset.key] = n;
 recompute();
@@ -3204,6 +3250,8 @@ g.strokeStyle = css('--panel'); g.lineWidth = 1.5; g.stroke();
 }
 let LAST = null;
 function drawCharts(o) {
+
+if (!$('yKills')) return;
 LAST = o;
 const { rows, min, max } = sweep(o);
 const n = o.items.length;
@@ -3673,6 +3721,7 @@ $('mapPick').value = mapSel;
 svSel = null;
 mapView = null; 
 renderMap();
+saveSoon(); 
 }
 
 const GOICON = `<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false"
@@ -4088,6 +4137,8 @@ if (mapSel) $('mapPick').value = mapSel;
 }
 let openTab = 'calc'; 
 let savedTab = null; 
+let savedSel = null; 
+let savedMap = null;
 function showTab(which) {
 openTab = which;
 $('viewCalc').hidden = which !== 'calc';
@@ -4360,12 +4411,18 @@ let gearSel = LOADOUTS[0].sel;
 const SAVE_KEY = 'inflation-rpg-explorer/sim/1';
 const SAVE_BOXES = ['sHP', 'sATK', 'sDEF', 'sAGI', 'sLUC', 'sBaseLv', 'sCharLv',
 'sPlays', 'sPts', 'sPtsMax', 'gWeaponN', 'gArmorN',
-'simHeal', 'simHealN', 'simGold', 'simTol', 'solveTarget'];
+'simHeal', 'simHealN', 'simGold', 'simTol', 'simTrials',
+'solveTarget'];
 let saveTimer = null, saveOff = false;
+
+
+const eneKey = (e) => [e.sp, e.md, e.sv, e.mp, e.b, e.lv];
+
+const ownCount = (id) => Math.min(OWN_CAP, Math.max(1, simNum(id)));
 function simState() {
 const cur = LOADOUTS[loadout];
-cur.wn = Math.max(1, simNum('gWeaponN'));
-cur.an = Math.max(1, simNum('gArmorN'));
+cur.wn = ownCount('gWeaponN');
+cur.an = ownCount('gArmorN');
 const box = {};
 SAVE_BOXES.forEach(id => { if ($(id)) box[id] = String($(id).value); });
 return {
@@ -4373,7 +4430,13 @@ loadouts: LOADOUTS.map(l => ({ sel: { ...l.sel }, wn: l.wn, an: l.an })),
 slot: loadout, hero: simHero, steps: simSteps, box,
 auto: $('simAuto') ? $('simAuto').checked : true,
 gold: goldMode(), byHand: $('healHand').checked,
+fixed: fixedTrials(),
 tab: openTab,
+
+
+
+ene: sel === null ? null : eneKey(ENEMIES[sel]),
+map: mapSel,
 };
 }
 function saveSim() {
@@ -4409,8 +4472,10 @@ if (/^g[A-Za-z0-9]+$/.test(k) && typeof v === 'string' &&
 .map(Number))))
 into.sel[k] = v;
 });
-into.wn = Number.isFinite(+l.wn) ? Math.min(99, Math.max(1, +l.wn)) : 1;
-into.an = Number.isFinite(+l.an) ? Math.min(99, Math.max(1, +l.an)) : 1;
+into.wn = Number.isFinite(+l.wn)
+? Math.min(OWN_CAP, Math.max(1, +l.wn)) : 1;
+into.an = Number.isFinite(+l.an)
+? Math.min(OWN_CAP, Math.max(1, +l.an)) : 1;
 });
 }
 if (Number.isInteger(st.slot) && st.slot >= 0 && st.slot < LOADOUTS.length) {
@@ -4444,7 +4509,15 @@ $('goldWrap').hidden = !st.gold;
 }
 if (typeof st.byHand === 'boolean' && $('healHand'))
 $('healHand').checked = st.byHand;
+if (typeof st.fixed === 'boolean' && $('fixedTrials'))
+$('fixedTrials').checked = st.fixed;
 if (['calc', 'items', 'maps', 'sim'].includes(st.tab)) savedTab = st.tab;
+if (Array.isArray(st.ene) && st.ene.length === 6) {
+const want = JSON.stringify(st.ene);
+const i = ENEMIES.findIndex(e => JSON.stringify(eneKey(e)) === want);
+if (i >= 0) savedSel = i;
+}
+if (typeof st.map === 'string' && MAPDB[st.map]) savedMap = st.map;
 }
 
 
@@ -4470,8 +4543,8 @@ return out;
 };
 function charCode() {
 const cur = LOADOUTS[loadout];
-cur.wn = Math.max(1, simNum('gWeaponN'));
-cur.an = Math.max(1, simNum('gArmorN'));
+cur.wn = ownCount('gWeaponN');
+cur.an = ownCount('gArmorN');
 const body = [
 1, simHero,
 ['sHP', 'sATK', 'sDEF', 'sAGI', 'sLUC'].map(id => simNum(id)),
@@ -4589,7 +4662,7 @@ sel, $('simHard').checked, $('simBonus').value, $('simRankType').value,
 simNum('simRank'),
 goldMode() ? ['gold', simNum('simGold')] : ['count', simNum('simHealN')],
 $('healHand').checked ? ['at', simNum('simHeal')] : ['auto'],
-simTolPct(), simHero, simSteps, loadout, LOADOUTS[loadout],
+simAsk(), simHero, simSteps, loadout, LOADOUTS[loadout],
 ['sHP', 'sATK', 'sDEF', 'sAGI', 'sLUC', 'sBaseLv', 'sCharLv', 'sPlays',
 'gWeaponN', 'gArmorN'].map(id => simNum(id)),
 ]);
@@ -4704,8 +4777,8 @@ $('codeSay').textContent = 'That is not a character code.';
 function switchLoadout(i) {
 if (i === loadout) return;
 const cur = LOADOUTS[loadout];
-cur.wn = Math.max(1, simNum('gWeaponN')); 
-cur.an = Math.max(1, simNum('gArmorN'));
+cur.wn = ownCount('gWeaponN'); 
+cur.an = ownCount('gArmorN');
 loadout = i;
 const next = LOADOUTS[i];
 gearSel = next.sel;
@@ -4728,8 +4801,8 @@ const w = pick('gWeapon'), a = pick('gArmor');
 
 
 return {
-weapon: w ? itemStats(w, Math.max(1, simNum('gWeaponN'))) : null,
-armor: a ? itemStats(a, Math.max(1, simNum('gArmorN'))) : null,
+weapon: w ? itemStats(w, ownCount('gWeaponN')) : null,
+armor: a ? itemStats(a, ownCount('gArmorN')) : null,
 accessories: acc,
 gamesPlayed: simNum('sPlays'),
 hardmode: $('simHard').checked,
@@ -5026,6 +5099,14 @@ return goldMode()
 
 
 let healSolved = { sig: '', pct: 50 };
+
+
+
+const worstBlow = (setup) => BATTLE.enemyHit(
+{ ...setup, myhp: setup.myhpm, EneHP: setup.EneHPM, hpbar: 1 }, () => 1).tdame;
+
+const safeHealPct = (setup) =>
+Math.ceil(2 * worstBlow(setup) / setup.myhpm * 100);
 function autoHealPct(setup, cap) {
 if (!cap) return healSolved.pct; 
 const sig = JSON.stringify([cap, setup.myhpm, setup.myatk, setup.mydef,
@@ -5033,8 +5114,10 @@ setup.myspeed, setup.EneHPM, setup.EneATK, setup.enePoint, setup.hard,
 setup.criKakuritu, setup.renzoKukakuritu, setup.equip]);
 if (sig === healSolved.sig) return healSolved.pct;
 const opts = { tol: 0.01, rel: 0.25, floorTol: 0.004, maxTrials: 4000 };
+
+
 const at = (pct) =>
-BATTLE.winProbability({ ...setup, healAt: pct / 100 }, opts).p;
+BATTLE.winProbability({ ...setup, healAt: pct / 100, healMax: cap }, opts).p;
 const seen = new Map();
 const p = (pct) => {
 if (!seen.has(pct)) seen.set(pct, at(pct));
@@ -5045,10 +5128,22 @@ for (let pct = 10; pct <= 99; pct += 10) if (p(pct) > p(best)) best = pct;
 const lo = Math.max(1, best - 9), hi = Math.min(99, best + 9);
 for (let pct = lo; pct <= hi; pct++) if (p(pct) > p(best)) best = pct;
 
+
+
+
+
+
+
+
+
+
+
+
 const top = p(best);
-let pick = best;
-for (const [pct, v] of [...seen].sort((a, b) => a[0] - b[0]))
-if (v >= top - 0.005) { pick = pct; break; }
+const ties = [...seen].sort((a, b) => a[0] - b[0])
+.filter(([, v]) => v >= top).map(([pct]) => pct);
+const safe = safeHealPct(setup);
+const pick = ties.find(pct => pct >= safe) ?? ties[0] ?? best;
 healSolved = { sig, pct: pick };
 return pick;
 }
@@ -5118,19 +5213,42 @@ const v = parseFloat($('simTol').value);
 if (!(v > 0)) return 0.2;
 return Math.min(SIM_MAX_TOL, Math.max(SIM_MIN_TOL, v));
 };
-const simAutoOn = () => $('simAuto').checked && simTolPct() >= SIM_AUTO_FLOOR;
+
+
+const SIM_MIN_TRIALS = 2000;
+const SIM_AUTO_TRIALS = 500000; 
+const fixedTrials = () => !!$('fixedTrials') && $('fixedTrials').checked;
+const simTrialsN = () => Math.min(SIM_TRIAL_CAP,
+Math.max(SIM_MIN_TRIALS, simNum('simTrials') || SIM_MIN_TRIALS));
+
+
+const simOpts = () => fixedTrials()
+? { tol: 0, rel: 0, floorTol: 0, maxTrials: simTrialsN() }
+: (() => { const tol = simTolPct() / 100;
+return { tol, rel: 0.1, floorTol: Math.min(tol, 0.0005),
+maxTrials: simTrialsFor(tol) }; })();
+
+const simAsk = () => JSON.stringify(simOpts());
+const simAutoOn = () => $('simAuto').checked && (fixedTrials()
+? simTrialsN() <= SIM_AUTO_TRIALS : simTolPct() >= SIM_AUTO_FLOOR);
 
 
 
 let simAutoWish = true;
 function syncSimCfg() {
-const tight = simTolPct() < SIM_AUTO_FLOOR;
-$('simAuto').checked = tight ? false : simAutoWish;
-$('simAuto').disabled = tight;
-$('simCfgWhy').textContent = tight
-? `Error margin under ±${SIM_AUTO_FLOOR}% can require significant `
-+ 'compute, so Auto Compute is unavailable'
-: '';
+const byTrials = fixedTrials();
+$('tolWrap').hidden = byTrials;
+$('trialWrap').hidden = !byTrials;
+const heavy = byTrials ? simTrialsN() > SIM_AUTO_TRIALS
+: simTolPct() < SIM_AUTO_FLOOR;
+$('simAuto').checked = heavy ? false : simAutoWish;
+$('simAuto').disabled = heavy;
+$('simCfgWhy').textContent = !heavy ? ''
+: byTrials
+? `More than ${SIM_AUTO_TRIALS.toLocaleString()} trials can require `
++ 'significant compute, so Auto Compute is unavailable'
+: `Error margin under ±${SIM_AUTO_FLOOR}% can require significant `
++ 'compute, so Auto Compute is unavailable';
 }
 
 
@@ -5142,6 +5260,66 @@ return Math.min(SIM_TRIAL_CAP, Math.max(20000, need));
 
 
 let simCache = null;
+
+
+
+
+let computing = false, computeStop = false, computeToken = 0;
+function showComputing(on) {
+computing = on;
+$('simGo').textContent = on ? 'Stop' : 'Compute';
+$('simGo').classList.toggle('running', on);
+}
+
+
+function stopCompute() {
+computeStop = true;
+if ($('simAuto').checked) {
+simAutoWish = false;
+$('simAuto').checked = false;
+syncSimCfg();
+}
+}
+
+const quickOpts = () => ({
+tol: fixedTrials() ? 0.01 : Math.max(simTolPct() / 100, 0.01),
+rel: 0.25, floorTol: 0.004, maxTrials: 20000,
+});
+
+
+const SYNC_TRIALS = 400000;
+
+let simRunning = null;
+
+
+async function sampleSlowly(parts, opts, sig) {
+const its = parts.filter(p => p.w)
+.map(p => ({ w: p.w, s: BATTLE.sampler(p.setup, opts) }));
+const my = ++computeToken;
+computeStop = false;
+showComputing(true);
+const target = its.reduce((n, it) => n + it.s.target, 0);
+const say = (msg) => { if ($('simStale')) $('simStale').textContent = msg; };
+try {
+for (const it of its) {
+while (!it.s.done) {
+const t0 = Date.now();
+do { it.s.step(2); } while (!it.s.done && Date.now() - t0 < 40);
+if (my !== computeToken) return false;
+if (computeStop) { say('Stopped. Win chance is stale.'); return false; }
+say(`${its.reduce((n, x) => n + x.s.trials, 0).toLocaleString()} of ` +
+`${target.toLocaleString()} battles`);
+await new Promise(r => setTimeout(r));
+}
+}
+} finally {
+if (my === computeToken) showComputing(false);
+}
+simCache = { sig, quick: false,
+r: BATTLE.mixOf(its.map(it => ({ w: it.w, r: it.s.result() }))) };
+runSim(false); 
+return true;
+}
 function runSim(quick, force) {
 if (!$('simOut')) return; 
 const en = simEnemy();
@@ -5177,22 +5355,23 @@ if ($('simHeal').value !== String(pct)) $('simHeal').value = String(pct);
 setup.healAt = pct / 100;
 }
 const parts = simParts(setup);
-const tolPct = simTolPct();
-const sig = JSON.stringify([tolPct, parts]);
+const sig = JSON.stringify([simAsk(), parts]);
 const fresh = simCache && simCache.sig === sig && !(simCache.quick && !quick);
 
 
 
 if (force || (!fresh && (simAutoOn() || !simCache))) {
-const tol = tolPct / 100;
-simCache = {
-sig, quick,
-r: BATTLE.winProbabilityMix(parts, quick
-? { tol: Math.max(tol, 0.01), rel: 0.25, floorTol: 0.004,
-maxTrials: 20000 }
-: { tol, rel: 0.1, floorTol: Math.min(tol, 0.0005),
-maxTrials: simTrialsFor(tol) }),
-};
+const opts = quick ? quickOpts() : simOpts();
+const live = parts.filter(p => p.w).length;
+
+
+
+
+if (quick || opts.maxTrials * live <= SYNC_TRIALS) {
+simCache = { sig, quick, r: BATTLE.winProbabilityMix(parts, opts) };
+} else {
+simRunning = sampleSlowly(parts, opts, sig);
+}
 }
 const r = simCache && simCache.r;
 const stale = !simCache || simCache.sig !== sig;
@@ -5279,9 +5458,7 @@ async function solve() {
 if (solving || !simEnemy()) return;
 const target = Math.min(100, Math.max(0,
 parseFloat($('solveTarget').value) || 0)) / 100;
-const tol = simTolPct() / 100;
-const opts = { tol, rel: 0.1, floorTol: Math.min(tol, 0.0005),
-maxTrials: simTrialsFor(tol) };
+const opts = simOpts();
 const was = $('sPts').value;
 const byHand = $('healHand').checked;
 const probe = (n) => {
@@ -5456,8 +5633,8 @@ const pic = it ? icon(it.t, it.n, 1) : '<span class="icon blank"></span>';
 const name = it ? esc(it.en) : (type === 2 ? 'Empty' : 'None');
 
 
-const times = type === 0 ? Math.max(1, simNum('gWeaponN'))
-: type === 1 ? Math.max(1, simNum('gArmorN')) : 1;
+const times = type === 0 ? ownCount('gWeaponN')
+: type === 1 ? ownCount('gArmorN') : 1;
 const line = it ? gearLine(it, times) : '';
 const face =
 mode === 'pic' ? pic :
@@ -5636,7 +5813,7 @@ document.querySelectorAll('#viewSim input, #viewSim select').forEach(el => {
 if (el.closest('.ipickmenu') || el.closest('#gSlot') ||
 ['sPts', 'sPtsRange', 'sPtsMax', 'simSv', 'simTol', 'simAuto',
 'simHard', 'solveTarget', 'healHand', 'simGold',
-'simHealN', 'goldMode'].includes(el.id))
+'simHealN', 'goldMode', 'simTrials', 'fixedTrials'].includes(el.id))
 return;
 el.onchange = () => runSim(false);
 if (el.type === 'range' || el.type === 'text' || el.type === 'number')
@@ -5684,7 +5861,16 @@ $('healHand').onchange = () => runSim(false);
 $('solveGo').onclick = () => { if (solving) solveStop = true; else solve(); };
 $('gSlot').querySelectorAll('input[name=gearslot]').forEach(r =>
 r.onchange = () => switchLoadout(+r.value));
-$('simGo').onclick = () => runSim(false, true);
+$('simGo').onclick = () => {
+if (computing) stopCompute(); else runSim(false, true);
+};
+$('fixedTrials').onchange = () => { syncSimCfg(); runSim(false); };
+$('simTrials').oninput = () => { syncSimCfg(); simSoon(false); };
+$('simTrials').onblur = () => {
+$('simTrials').value = simTrialsN().toLocaleString();
+syncSimCfg();
+runSim(false);
+};
 $('simTol').oninput = () => { syncSimCfg(); runSim(false); };
 
 
@@ -5893,12 +6079,18 @@ makeStepper($('simHeal'), 1);
 makeStepper($('simHealN'), 1);
 ['sHP', 'sATK', 'sDEF', 'sAGI', 'sLUC', 'sPtsMax', 'sPts', 'luk', 'simGold']
 .forEach(id => groupDigits($(id)));
+groupDigits($('simTrials'));
 buildSvSlider();
 sliderFromBox();
 renderList();
 
+
+if (savedSel !== null) select(savedSel);
+else {
 const want = listable().find(([e]) => e.sp === 'ene1_ba');
 select(want ? want[1] : listable().find(([e]) => e.d)[1]);
+}
+if (savedMap) goMap(savedMap);
 
 
 if (savedTab && savedTab !== 'calc') showTab(savedTab);
